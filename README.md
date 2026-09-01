@@ -23,8 +23,10 @@ Buka http://localhost:3000
 
 ## Cara pakai
 
-1. **Profil** — isi sekali: nama, Employee ID, posisi, dst. Upload gambar tanda tangan
-   (PNG/JPG). Semua tersimpan di browser.
+1. **Profil** — isi sekali: nama, Employee ID, posisi, nama DH & Team Lead, dst.
+   Upload gambar tanda tangan pegawai (PNG/JPG). Semua tersimpan di browser.
+   Blok tanda tangan di output = 3 kolom: **Pegawai | DH | Team Lead**
+   (DH & Team Lead cukup nama, ditandatangani basah setelah dicetak).
 2. **Periode** — pilih bulan. Weekend otomatis ditandai.
 3. **Aktivitas Harian** — untuk tiap hari kerja pilih status (Hari Kerja / Cuti / Izin /
    Sakit / Libur / Belum Masuk) dan isi jam + aktivitas. Pakai tombol
@@ -38,12 +40,12 @@ Buka http://localhost:3000
 |---|---|
 | `src/lib/types.ts` | Model data timesheet |
 | `src/lib/timesheet.ts` | Kalkulasi hari/jam, default bulanan, rekap |
-| `src/lib/renderHtml.ts` | Render HTML meniru layout Mandiri (dipakai preview + PDF) |
-| `src/lib/fillXlsx.ts` | Isi `src/assets/template.xlsx` pakai ExcelJS |
+| `src/lib/renderHtml.ts` | Render HTML meniru layout PDF Mandiri (dipakai preview + PDF) |
+| `src/lib/fillXlsx.ts` | Bangun workbook XLSX dari nol (ExcelJS), meniru layout PDF |
 | `src/lib/pdf.ts` | HTML → PDF via Puppeteer (Chromium) |
 | `src/app/api/export/xlsx` | Endpoint download XLSX |
 | `src/app/api/export/pdf` | Endpoint download PDF |
-| `src/assets/template.xlsx` | Template Mandiri asli (jangan diubah manual) |
+| `src/assets/logo.ts` | Logo Mandiri MCO (base64, di-extract dari PDF contoh) |
 
 ## Deploy ke Vercel
 

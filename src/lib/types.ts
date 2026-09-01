@@ -29,9 +29,12 @@ export interface Profile {
   projectCode: string;
   activityCode: string;
   pmContact: string;
-  /** Nama & jabatan approver */
-  approverName: string;
-  approverTitle: string;
+  /** Nama Team Lead (kolom "Disetujui oleh: Team Lead") */
+  teamLeadName: string;
+  /** Label jabatan approver kanan, default "Team Lead" */
+  teamLeadTitle: string;
+  /** Nama DH / Department Head (kolom "Tanda Tangan DH,") */
+  dhName: string;
   /** data URL gambar tanda tangan pegawai (png), opsional */
   signatureDataUrl: string;
   /** Default jam kerja untuk tombol "isi semua" */
@@ -39,40 +42,27 @@ export interface Profile {
   defaultEnd: string;
 }
 
-export interface PerformanceRating {
-  /** Sasaran dan Hasil Kerja */
-  sasaran: RatingLevel;
-  /** Kompetensi Pendukung */
-  kompetensi: RatingLevel;
-  /** Kedisiplinan */
-  kedisiplinan: RatingLevel;
-}
-
-export type RatingLevel =
-  | "Sangat Memuaskan"
-  | "Memuaskan"
-  | "Tidak Memuaskan"
-  | "Sangat tidak memuaskan"
-  | "";
-
 export interface Timesheet {
   /** "YYYY-MM" */
   month: string;
   profile: Profile;
   days: DayEntry[];
-  rating: PerformanceRating;
   statement: string;
 }
 
-export const DEFAULT_STATEMENT =
-  "Time report ini saya buat dengan sunguh-sungguh dan sebenarnya sesuai dengan nilai-nilai etika dan profesionalisme perusahaan.";
-
-export const RATING_LEVELS: RatingLevel[] = [
+/**
+ * Opsi kolom "Penilaian User" — hanya untuk ditampilkan sebagai daftar di
+ * output. Kotak centangnya sengaja dibiarkan kosong (diisi manual Team Lead).
+ */
+export const PENILAIAN_OPTIONS = [
   "Sangat Memuaskan",
   "Memuaskan",
   "Tidak Memuaskan",
   "Sangat tidak memuaskan",
-];
+] as const;
+
+export const DEFAULT_STATEMENT =
+  "Time report ini saya buat dengan sunguh-sungguh dan sebenarnya sesuai dengan nilai-nilai etika dan profesionalisme perusahaan.";
 
 export const STATUS_LABELS: Record<DayStatus, string> = {
   work: "Hari Kerja",

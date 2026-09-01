@@ -53,22 +53,34 @@ export function ProfileForm({ profile, onChange }: Props) {
 
       <div className="grid-2" style={{ marginTop: 14 }}>
         <div className="field">
-          <label htmlFor="p-approverTitle">Jabatan Approver</label>
+          <label htmlFor="p-dhName">Nama DH (Department Head)</label>
           <input
-            id="p-approverTitle"
-            value={profile.approverTitle}
-            placeholder="Team Lead"
-            onChange={(e) => onChange({ approverTitle: e.target.value })}
+            id="p-dhName"
+            value={profile.dhName}
+            placeholder="Elia Dolaciho Bangun"
+            onChange={(e) => onChange({ dhName: e.target.value })}
           />
         </div>
         <div className="field">
-          <label htmlFor="p-approverName">Nama Approver</label>
+          <label htmlFor="p-tlName">Nama Team Lead</label>
           <input
-            id="p-approverName"
-            value={profile.approverName}
+            id="p-tlName"
+            value={profile.teamLeadName}
             placeholder="Moh Adam Alfian"
-            onChange={(e) => onChange({ approverName: e.target.value })}
+            onChange={(e) => onChange({ teamLeadName: e.target.value })}
           />
+        </div>
+        <div className="field">
+          <label htmlFor="p-tlTitle">Label Kolom Approver Kanan</label>
+          <input
+            id="p-tlTitle"
+            value={profile.teamLeadTitle}
+            placeholder="Team Lead"
+            onChange={(e) => onChange({ teamLeadTitle: e.target.value })}
+          />
+          <p className="inline-help">
+            Tampil sebagai &quot;Disetujui oleh: {profile.teamLeadTitle || "Team Lead"}&quot;
+          </p>
         </div>
         <div className="field">
           <label htmlFor="p-ds">Jam Mulai Default</label>

@@ -207,8 +207,9 @@ export const emptyProfile: Profile = {
   projectCode: "",
   activityCode: "",
   pmContact: "",
-  approverName: "",
-  approverTitle: "Team Lead",
+  teamLeadName: "",
+  teamLeadTitle: "Team Lead",
+  dhName: "",
   signatureDataUrl: "",
   defaultStart: "09:00",
   defaultEnd: "18:00",
@@ -219,11 +220,6 @@ export function emptyTimesheet(month: string): Timesheet {
     month,
     profile: emptyProfile,
     days: buildDays(month, emptyProfile),
-    rating: {
-      sasaran: "Sangat Memuaskan",
-      kompetensi: "Sangat Memuaskan",
-      kedisiplinan: "Sangat Memuaskan",
-    },
     statement: DEFAULT_STATEMENT,
   };
 }

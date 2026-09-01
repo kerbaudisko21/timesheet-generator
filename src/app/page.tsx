@@ -13,13 +13,7 @@ import {
   reconcileDays,
   summarize,
 } from "@/lib/timesheet";
-import {
-  DEFAULT_STATEMENT,
-  Profile,
-  RATING_LEVELS,
-  RatingLevel,
-  Timesheet,
-} from "@/lib/types";
+import { DEFAULT_STATEMENT, Profile, Timesheet } from "@/lib/types";
 
 type Toast = { msg: string; err?: boolean } | null;
 
@@ -35,14 +29,6 @@ export default function Page() {
   const [daysByMonth, setDaysByMonth] = usePersistentState<
     Record<string, Timesheet["days"]>
   >("tsg.daysByMonth", {});
-  const [rating, setRating] = usePersistentState<Timesheet["rating"]>(
-    "tsg.rating",
-    {
-      sasaran: "Sangat Memuaskan",
-      kompetensi: "Sangat Memuaskan",
-      kedisiplinan: "Sangat Memuaskan",
-    }
-  );
   const [statement, setStatement] = usePersistentState<string>(
     "tsg.statement",
     DEFAULT_STATEMENT
@@ -67,8 +53,8 @@ export default function Page() {
   const days = daysByMonth[month] ?? [];
 
   const timesheet: Timesheet = useMemo(
-    () => ({ month, profile, days, rating, statement }),
-    [month, profile, days, rating, statement]
+    () => ({ month, profile, days, statement }),
+    [month, profile, days, statement]
   );
 
   const summary = useMemo(() => summarize(timesheet), [timesheet]);
@@ -234,7 +220,7 @@ export default function Page() {
             )}
           </Collapsible>
 
-          <Collapsible title="4. Pernyataan & Penilaian User" defaultOpen={false}>
+          <Collapsible title="4. Pernyataan Pegawai" defaultOpen={false}>
             <div className="field">
               <label htmlFor="stmt">Pernyataan Pegawai</label>
               <textarea
@@ -242,34 +228,11 @@ export default function Page() {
                 value={statement}
                 onChange={(e) => setStatement(e.target.value)}
               />
-            </div>
-            <div className="grid-2" style={{ marginTop: 12 }}>
-              {(
-                [
-                  ["sasaran", "Sasaran dan Hasil Kerja"],
-                  ["kompetensi", "Kompetensi Pendukung"],
-                  ["kedisiplinan", "Kedisiplinan"],
-                ] as const
-              ).map(([key, label]) => (
-                <div className="field" key={key}>
-                  <label>{label}</label>
-                  <select
-                    value={rating[key]}
-                    onChange={(e) =>
-                      setRating((r) => ({
-                        ...r,
-                        [key]: e.target.value as RatingLevel,
-                      }))
-                    }
-                  >
-                    {RATING_LEVELS.map((l) => (
-                      <option key={l} value={l}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+              <p className="inline-help">
+                Bagian &quot;Penilaian User&quot; (Sasaran / Kompetensi /
+                Kedisiplinan) sengaja dibiarkan kosong di output — diisi manual
+                oleh Team Lead.
+              </p>
             </div>
           </Collapsible>
         </div>

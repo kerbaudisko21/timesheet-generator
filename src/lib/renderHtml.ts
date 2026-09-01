@@ -10,7 +10,7 @@ import {
   toMinutes,
   workedMinutes,
 } from "./timesheet";
-import { DayEntry, RatingLevel, Timesheet } from "./types";
+import { DayEntry, Timesheet } from "./types";
 
 function esc(s: string): string {
   return String(s ?? "")
@@ -71,10 +71,17 @@ function activityText(day: DayEntry): string {
   return "";
 }
 
-function ratingRow(label: string, active: RatingLevel, current: RatingLevel) {
-  const mark = active === current ? "checked" : "";
-  return `<div class="rate-line"><span>${esc(label)}</span><span class="rate-box ${mark}"></span></div>`;
+// Kotak penilaian sengaja dibiarkan KOSONG — diisi manual oleh Team Lead.
+function ratingRow(label: string) {
+  return `<div class="rate-line"><span>${esc(label)}</span><span class="rate-box"></span></div>`;
 }
+
+const RATING_OPTIONS = [
+  "Sangat Memuaskan",
+  "Memuaskan",
+  "Tidak Memuaskan",
+  "Sangat tidak memuaskan",
+];
 
 /**
  * Render satu halaman timesheet meniru format "Template Timesheet Mandiri".
@@ -169,11 +176,12 @@ export function renderTimesheetHtml(ts: Timesheet, opts?: { forPdf?: boolean }):
   .rate-box { width: 10px; height: 10px; border: 1px solid var(--line); display: inline-block; }
   .rate-box.checked { background: #333; }
   .sign { display: flex; margin-top: 2px; font-size: 9px; }
-  .sign > div { flex: 1; border: 1px solid var(--line); border-top: none; text-align: center; padding: 4px; min-height: 90px; }
-  .sign > div:first-child { border-right: none; }
-  .sign .sig-img { height: 46px; margin: 4px auto 0; display: block; }
-  .sign .who { margin-top: 4px; font-weight: bold; }
-  .sign .spacer { height: 46px; }
+  .sign > div { flex: 1; border: 1px solid var(--line); border-top: none; text-align: center; padding: 4px 6px; min-height: 96px; display: flex; flex-direction: column; }
+  .sign > div + div { border-left: none; }
+  .sign .sig-head { min-height: 12px; }
+  .sign .sig-img { height: 46px; margin: 4px auto 2px; display: block; max-width: 90%; object-fit: contain; }
+  .sign .spacer { flex: 1; min-height: 44px; }
+  .sign .who { margin-top: auto; font-weight: bold; padding-top: 2px; }
   @page { size: A4 portrait; margin: 0; }
 </style>
 </head>
@@ -239,21 +247,15 @@ export function renderTimesheetHtml(ts: Timesheet, opts?: { forPdf?: boolean }):
         <div class="rate-cols">
           <div class="rate-col">
             <h4>Sasaran dan Hasil Kerja</h4>
-            ${["Sangat Memuaskan", "Memuaskan", "Tidak Memuaskan", "Sangat tidak memuaskan"]
-              .map((l) => ratingRow(l, ts.rating.sasaran, l as RatingLevel))
-              .join("")}
+            ${RATING_OPTIONS.map((l) => ratingRow(l)).join("")}
           </div>
           <div class="rate-col">
             <h4>Kompetensi Pendukung</h4>
-            ${["Sangat Memuaskan", "Memuaskan", "Tidak Memuaskan", "Sangat tidak memuaskan"]
-              .map((l) => ratingRow(l, ts.rating.kompetensi, l as RatingLevel))
-              .join("")}
+            ${RATING_OPTIONS.map((l) => ratingRow(l)).join("")}
           </div>
           <div class="rate-col">
             <h4>Kedisiplinan</h4>
-            ${["Sangat Memuaskan", "Memuaskan", "Tidak Memuaskan", "Sangat tidak memuaskan"]
-              .map((l) => ratingRow(l, ts.rating.kedisiplinan, l as RatingLevel))
-              .join("")}
+            ${RATING_OPTIONS.map((l) => ratingRow(l)).join("")}
           </div>
         </div>
       </div>
@@ -262,18 +264,23 @@ export function renderTimesheetHtml(ts: Timesheet, opts?: { forPdf?: boolean }):
 
   <div class="sign">
     <div>
-      <div>Tanda Tangan Pegawai,</div>
+      <div class="sig-head">Tanda Tangan Pegawai,</div>
       ${
         p.signatureDataUrl
-          ? `<img class="sig-img" src="${p.signatureDataUrl}" alt="ttd" />`
+          ? `<img class="sig-img" src="${p.signatureDataUrl}" alt="ttd pegawai" />`
           : `<div class="spacer"></div>`
       }
       <div class="who">${esc(p.name)}</div>
     </div>
     <div>
-      <div>Disetujui oleh: ${esc(p.approverTitle)}</div>
+      <div class="sig-head">Tanda Tangan DH,</div>
       <div class="spacer"></div>
-      <div class="who">${esc(p.approverName)}</div>
+      <div class="who">${esc(p.dhName)}</div>
+    </div>
+    <div>
+      <div class="sig-head">Disetujui oleh: ${esc(p.teamLeadTitle)}</div>
+      <div class="spacer"></div>
+      <div class="who">${esc(p.teamLeadName)}</div>
     </div>
   </div>
 </div>
