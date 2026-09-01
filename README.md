@@ -54,9 +54,21 @@ npm i -g vercel
 vercel
 ```
 
-Tidak perlu env var. `@sparticuz/chromium` sudah terdeteksi lewat
-`experimental.serverComponentsExternalPackages` di `next.config.mjs`.
-Route PDF di-set `maxDuration = 60`.
+Tidak perlu env var.
+
+**PDF di serverless** memakai `@sparticuz/chromium-min`: binary Chromium + shared
+library (`libnss3.so`, dll) **tidak di-bundle**, tapi diunduh saat runtime dari
+GitHub release pack (`chromium-v133.0.0-pack.tar`, ~63 MB, di-cache di `/tmp`).
+Ini menghindari error `libnss3.so: cannot open shared object file` yang muncul
+kalau pakai `@sparticuz/chromium` biasa (file tracing Next gagal ikut sertakan
+`.so`-nya).
+
+- Versi `@sparticuz/chromium-min` di `package.json` **harus sama persis** dengan
+  versi tar di `src/lib/pdf.ts` (`CHROMIUM_PACK_URL`).
+- Mau host tar sendiri (mis. di Vercel Blob / R2)? Set env `CHROMIUM_PACK_URL`.
+- `vercel.json`: route PDF `memory: 1769 MB`, `maxDuration: 60`.
+- Lokal (`npm run dev`) tetap pakai `puppeteer` penuh (Chrome-nya terunduh saat
+  `npm install`).
 
 ## Catatan
 

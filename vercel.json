@@ -1,9 +1,11 @@
 {
   "functions": {
     "src/app/api/export/pdf/route.ts": {
+      "memory": 1769,
       "maxDuration": 60
     },
     "src/app/api/export/xlsx/route.ts": {
+      "memory": 1024,
       "maxDuration": 30
     }
   }
