@@ -167,6 +167,29 @@ export function autoActivityFor(status: DayStatus, dateIso: string): string {
   }
 }
 
+/**
+ * Pecah teks aktivitas menjadi baris-baris yang sudah dirapikan.
+ * - Baris kosong dibuang.
+ * - Jika >= 2 baris DAN belum ada penomoran/bullet manual, tambahkan "1. ", "2. ", ...
+ * - Jika hanya 1 baris, kembalikan apa adanya (tanpa nomor).
+ */
+export function activityLines(raw: string): string[] {
+  const lines = (raw || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  if (lines.length <= 1) return lines;
+
+  // sudah dinomori / bullet manual? (mis. "1.", "1)", "-", "•", "*")
+  const alreadyMarked = lines.every((l) =>
+    /^(\d+[.)]\s+|[-•*]\s+)/.test(l)
+  );
+  if (alreadyMarked) return lines;
+
+  return lines.map((l, i) => `${i + 1}. ${l}`);
+}
+
 /** buat daftar hari default untuk sebuah bulan */
 export function buildDays(month: string, profile: Profile): DayEntry[] {
   const total = daysInMonth(month);

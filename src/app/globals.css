@@ -302,11 +302,17 @@ a {
   display: grid;
   grid-template-columns: 92px 108px 74px 74px minmax(0, 1fr);
   gap: 8px;
-  align-items: center;
+  align-items: start;
   padding: 7px 8px;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: #fff;
+}
+
+.day-row > .date,
+.day-row > select,
+.day-row > .time-cell {
+  margin-top: 1px;
 }
 
 .day-row.is-off {
@@ -331,7 +337,8 @@ a {
 }
 
 .day-row select,
-.day-row input {
+.day-row input,
+.day-row textarea {
   font: inherit;
   font-size: 12px;
   padding: 6px 7px;
@@ -342,8 +349,16 @@ a {
   outline: none;
 }
 
+.day-row textarea.act-input {
+  resize: vertical;
+  min-height: 32px;
+  line-height: 1.35;
+  font-family: inherit;
+}
+
 .day-row input:focus,
-.day-row select:focus {
+.day-row select:focus,
+.day-row textarea:focus {
   border-color: var(--accent);
 }
 

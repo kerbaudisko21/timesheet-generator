@@ -174,12 +174,18 @@ export function DayEditor({ days, defaultStart, defaultEnd, onChange }: Props) {
               </div>
 
               <div className="act-cell">
-                <input
-                  type="text"
+                <textarea
+                  className="act-input"
+                  rows={
+                    Math.min(
+                      6,
+                      Math.max(1, d.activity.split(/\r?\n/).length)
+                    )
+                  }
                   value={d.activity}
                   placeholder={
                     d.status === "work"
-                      ? "Aktivitas / remark…"
+                      ? "Aktivitas / remark… (Enter untuk baris baru, otomatis dinomori)"
                       : autoActivityFor(d.status, d.date)
                   }
                   onChange={(e) => patch(idx, { activity: e.target.value })}

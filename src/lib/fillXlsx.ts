@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import {
+  activityLines,
   autoActivityFor,
-  formatTotalHours,
   shortPeriode,
   summarize,
   toMinutes,
@@ -153,7 +153,6 @@ export async function fillTimesheetXlsx(ts: Timesheet): Promise<Buffer> {
   days.forEach((day: DayEntry, i) => {
     const r = FIRST + i;
     const row = ws.getRow(r);
-    row.height = 13.5;
 
     const [dy, dm, dd] = day.date.split("-").map(Number);
     const dateCell = ws.getCell(r, 1);
@@ -185,13 +184,25 @@ export async function fillTimesheetXlsx(ts: Timesheet): Promise<Buffer> {
 
     ws.mergeCells(r, 6, r, 14);
     const actCell = ws.getCell(r, 6);
-    actCell.value =
-      day.activity && day.activity.trim()
-        ? day.activity.trim()
-        : isWork
-        ? ""
-        : autoActivityFor(day.status, day.date);
-    actCell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    let actText: string;
+    let lineCount = 1;
+    if (day.activity && day.activity.trim()) {
+      const lines = activityLines(day.activity);
+      lineCount = Math.max(1, lines.length);
+      actText = lines.join("\n");
+    } else if (isWork) {
+      actText = "";
+    } else {
+      actText = autoActivityFor(day.status, day.date);
+    }
+    actCell.value = actText;
+    actCell.alignment = {
+      horizontal: lineCount > 1 ? "left" : "center",
+      vertical: "middle",
+      wrapText: true,
+    };
+    // tinggi baris menyesuaikan jumlah baris aktivitas (≈12pt per baris)
+    row.height = lineCount > 1 ? 12 * lineCount + 3 : 13.5;
 
     for (let c = 1; c <= 14; c++) {
       const cell = ws.getCell(r, c);

@@ -1,5 +1,6 @@
 import { MANDIRI_LOGO_DATA_URL } from "@/assets/logo";
 import {
+  activityLines,
   autoActivityFor,
   dayName,
   formatTotalHours,
@@ -65,9 +66,16 @@ function rowClass(day: DayEntry): string {
   }
 }
 
-function activityText(day: DayEntry): string {
-  if (day.activity && day.activity.trim()) return day.activity.trim();
-  if (day.status !== "work") return autoActivityFor(day.status, day.date);
+/** HTML aktivitas: multi-baris jadi <br>, auto-nomor bila >= 2 baris */
+function activityHtml(day: DayEntry): string {
+  if (day.activity && day.activity.trim()) {
+    const lines = activityLines(day.activity);
+    if (lines.length <= 1) return esc(lines[0] ?? day.activity.trim());
+    return `<span class="act-list">${lines
+      .map((l) => esc(l))
+      .join("<br />")}</span>`;
+  }
+  if (day.status !== "work") return esc(autoActivityFor(day.status, day.date));
   return "";
 }
 
@@ -117,7 +125,7 @@ export function renderTimesheetHtml(ts: Timesheet, opts?: { forPdf?: boolean }):
         <td class="c-sep">${start ? "-" : ""}</td>
         <td class="c-hour">${end}</td>
         <td class="c-total">${total}</td>
-        <td class="c-act">${esc(activityText(d))}</td>
+        <td class="c-act">${activityHtml(d)}</td>
       </tr>`;
     })
     .join("\n");
@@ -156,7 +164,9 @@ export function renderTimesheetHtml(ts: Timesheet, opts?: { forPdf?: boolean }):
   .c-sep  { width: 10px; text-align: center; border-left: none; border-right: none; }
   .c-total { width: 40px; text-align: center; }
   .c-act { text-align: center; }
+  .c-act .act-list { display: block; text-align: left; line-height: 1.4; padding-left: 6px; }
   tbody tr { height: 14px; }
+  tbody td { vertical-align: middle; }
   .row-weekend td, .row-holiday td, .row-leave td, .row-absent td { background: var(--pink); text-align: center; }
   .row-weekend .c-act, .row-holiday .c-act, .row-leave .c-act, .row-absent .c-act { font-style: normal; }
   tr.total-row td { font-weight: bold; text-align: center; background: #fff; }
