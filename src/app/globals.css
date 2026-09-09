@@ -378,6 +378,63 @@ a {
   }
 }
 
+/* ---------- lembur ---------- */
+.empty-note {
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--panel-soft);
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0;
+}
+
+.ot-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.ot-row {
+  display: grid;
+  grid-template-columns: 130px 108px 64px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  align-items: baseline;
+}
+.ot-row:first-child {
+  border-top: none;
+}
+.ot-row.ot-head {
+  background: var(--panel-soft);
+  font-weight: 600;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+.ot-total {
+  font-weight: 700;
+}
+.ot-work {
+  color: var(--text-soft);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 620px) {
+  .ot-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ot-row .ot-work {
+    grid-column: 1 / -1;
+  }
+  .ot-row.ot-head {
+    display: none;
+  }
+}
+
 /* ---------- preview ---------- */
 .preview-wrap {
   position: sticky;

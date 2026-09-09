@@ -109,6 +109,96 @@ export function workedMinutes(day: DayEntry): number {
   return diff > 0 ? diff : 0;
 }
 
+/** Jam kerja normal per hari sebelum dihitung lembur. */
+export const NORMAL_WORK_MINUTES = 9 * 60;
+
+export interface OvertimeEntry {
+  /** ISO date */
+  date: string;
+  /** "Selasa/4 Aug 2026" — gaya dokumen lembur */
+  dayLabel: string;
+  /** "HH:mm" jam mulai lembur = jam masuk + 9 jam */
+  overtimeStart: string;
+  /** "HH:mm" jam selesai lembur = jam pulang */
+  overtimeEnd: string;
+  /** "18.08 – 23.57" — string tampil di kolom Waktu Lembur */
+  windowLabel: string;
+  /** total jam lembur, sudah dibulatkan ke 0.5 terdekat, mis. 5.5 */
+  totalHours: number;
+  /** menit lembur mentah (sebelum pembulatan) */
+  rawMinutes: number;
+  /** deskripsi pekerjaan (dari activity hari itu) */
+  work: string;
+}
+
+/** bulatkan menit -> jam, dibulatkan ke 0.5 terdekat */
+export function roundHalf(hours: number): number {
+  return Math.round(hours * 2) / 2;
+}
+
+/** "HH:mm" -> "HH.mm" gaya dokumen lembur */
+function dotTime(hhmm: string): string {
+  return hhmm.replace(":", ".");
+}
+
+const EN_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** "Selasa/4 Aug 2026" */
+export function overtimeDayLabel(dateIso: string): string {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  return `${dayName(dateIso)}/${d} ${EN_MONTHS[m - 1]} ${y}`;
+}
+
+/**
+ * Hitung lembur satu hari. Return null bila hari itu tidak lembur
+ * (bukan hari kerja, atau total kerja <= 9 jam).
+ * Jam mulai lembur = jam masuk + 9 jam. Jam selesai = jam pulang.
+ */
+export function overtimeForDay(day: DayEntry): OvertimeEntry | null {
+  if (day.status !== "work") return null;
+  const worked = workedMinutes(day);
+  if (worked <= NORMAL_WORK_MINUTES) return null;
+
+  const startMin = toMinutes(day.start);
+  const otStartMin = (startMin + NORMAL_WORK_MINUTES) % (24 * 60);
+  const otEndMin = toMinutes(day.end);
+  const rawMinutes = worked - NORMAL_WORK_MINUTES;
+
+  const otStart = fromMinutes(otStartMin);
+  const otEnd = fromMinutes(otEndMin);
+
+  return {
+    date: day.date,
+    dayLabel: overtimeDayLabel(day.date),
+    overtimeStart: otStart,
+    overtimeEnd: otEnd,
+    windowLabel: `${dotTime(otStart)} – ${dotTime(otEnd)}`,
+    totalHours: roundHalf(rawMinutes / 60),
+    rawMinutes,
+    work: (day.activity || "").trim(),
+  };
+}
+
+/** Semua hari lembur dalam sebuah timesheet, urut tanggal. */
+export function overtimeEntries(ts: Timesheet): OvertimeEntry[] {
+  return ts.days
+    .map(overtimeForDay)
+    .filter((e): e is OvertimeEntry => e !== null);
+}
+
 /** "115:30" — total jam format [h]:mm */
 export function formatTotalHours(totalMinutes: number): string {
   const h = Math.floor(totalMinutes / 60);

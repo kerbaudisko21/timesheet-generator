@@ -10,6 +10,7 @@ import {
   currentMonth,
   emptyProfile,
   monthLabel,
+  overtimeEntries,
   reconcileDays,
   summarize,
 } from "@/lib/timesheet";
@@ -35,7 +36,7 @@ export default function Page() {
   );
 
   const [toast, setToast] = useState<Toast>(null);
-  const [busy, setBusy] = useState<"" | "xlsx" | "pdf">("");
+  const [busy, setBusy] = useState<"" | "xlsx" | "pdf" | "lembur">("");
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -58,6 +59,7 @@ export default function Page() {
   );
 
   const summary = useMemo(() => summarize(timesheet), [timesheet]);
+  const overtime = useMemo(() => overtimeEntries(timesheet), [timesheet]);
 
   function showToast(msg: string, err = false) {
     setToast({ msg, err });
@@ -72,11 +74,16 @@ export default function Page() {
     setDaysByMonth((prev) => ({ ...prev, [month]: next }));
   }
 
-  async function download(kind: "xlsx" | "pdf") {
+  async function download(kind: "xlsx" | "pdf" | "lembur") {
     if (!profile.name.trim()) {
       showToast("Isi dulu nama di bagian Profil.", true);
       return;
     }
+    const labelMap: Record<typeof kind, string> = {
+      xlsx: "XLSX",
+      pdf: "PDF",
+      lembur: "Surat Lembur",
+    };
     setBusy(kind);
     try {
       const res = await fetch(`/api/export/${kind}`, {
@@ -91,19 +98,20 @@ export default function Page() {
       const blob = await res.blob();
       const cd = res.headers.get("Content-Disposition") || "";
       const m = /filename="([^"]+)"/.exec(cd);
+      const ext = kind === "xlsx" ? "xlsx" : "pdf";
       const fname =
         m?.[1] ||
-        `TS_${profile.name}_${monthLabel(month).replace(" ", "_")}.${kind}`;
+        `${kind}_${profile.name}_${monthLabel(month).replace(" ", "_")}.${ext}`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = fname;
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`${kind.toUpperCase()} berhasil diunduh.`);
+      showToast(`${labelMap[kind]} berhasil diunduh.`);
     } catch (e) {
       showToast(
-        `Gagal membuat ${kind.toUpperCase()}: ${
+        `Gagal membuat ${labelMap[kind]}: ${
           e instanceof Error ? e.message : "error"
         }`,
         true
@@ -233,6 +241,63 @@ export default function Page() {
                 Kedisiplinan) sengaja dibiarkan kosong di output — diisi manual
                 oleh Team Lead.
               </p>
+            </div>
+          </Collapsible>
+
+          <Collapsible
+            title="5. Lembur"
+            defaultOpen={false}
+            right={
+              overtime.length > 0 ? (
+                <span className="badge">{overtime.length} hari</span>
+              ) : undefined
+            }
+          >
+            <p className="inline-help" style={{ marginBottom: 12 }}>
+              Otomatis dari Aktivitas Harian: setiap hari kerja dengan total
+              &gt; 9 jam dihitung lembur. Jam mulai lembur = jam masuk + 9 jam,
+              total dibulatkan ke 0,5 jam terdekat. Unit Kerja memakai Main
+              Project Name.
+            </p>
+
+            {overtime.length === 0 ? (
+              <p className="empty-note">
+                Tidak ada hari lembur pada {monthLabel(month)}. Isi jam pulang
+                lebih dari 9 jam kerja untuk memunculkan baris lembur.
+              </p>
+            ) : (
+              <div className="ot-list">
+                <div className="ot-row ot-head">
+                  <span>Hari / Tanggal</span>
+                  <span>Waktu Lembur</span>
+                  <span>Total (jam)</span>
+                  <span>Pekerjaan</span>
+                </div>
+                {overtime.map((e) => (
+                  <div className="ot-row" key={e.date}>
+                    <span>{e.dayLabel}</span>
+                    <span>{e.windowLabel}</span>
+                    <span className="ot-total">
+                      {Number.isInteger(e.totalHours)
+                        ? e.totalHours
+                        : e.totalHours.toFixed(1)}
+                    </span>
+                    <span className="ot-work">{e.work || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="btn-row" style={{ marginTop: 14 }}>
+              <button
+                className="btn primary"
+                disabled={!!busy || overtime.length === 0}
+                onClick={() => download("lembur")}
+              >
+                {busy === "lembur"
+                  ? "Membuat…"
+                  : "⬇ Download Surat Lembur (PDF)"}
+              </button>
             </div>
           </Collapsible>
         </div>

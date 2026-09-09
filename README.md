@@ -31,8 +31,12 @@ Buka http://localhost:3000
 3. **Aktivitas Harian** — untuk tiap hari kerja pilih status (Hari Kerja / Cuti / Izin /
    Sakit / Libur / Belum Masuk) dan isi jam + aktivitas. Pakai tombol
    *Isi semua hari kerja 09:00–18:00* untuk mempercepat.
-4. **Pernyataan & Penilaian** — teks pernyataan + 3 rating (default "Sangat Memuaskan").
-5. Klik **Download XLSX** atau **Download PDF** di kanan atas.
+4. **Pernyataan Pegawai** — teks pernyataan. Bagian "Penilaian User" dibiarkan
+   kosong (diisi TL).
+5. **Lembur** — otomatis: tiap hari kerja > 9 jam jadi baris lembur. Jam mulai
+   lembur = jam masuk + 9 jam, total dibulatkan ke 0,5 jam terdekat, Unit Kerja
+   = Main Project Name. Klik **Download Surat Lembur (PDF)**.
+6. Klik **Download XLSX** atau **Download PDF** di kanan atas.
 
 ## Struktur
 
@@ -40,11 +44,13 @@ Buka http://localhost:3000
 |---|---|
 | `src/lib/types.ts` | Model data timesheet |
 | `src/lib/timesheet.ts` | Kalkulasi hari/jam, default bulanan, rekap |
-| `src/lib/renderHtml.ts` | Render HTML meniru layout PDF Mandiri (dipakai preview + PDF) |
+| `src/lib/renderHtml.ts` | Render HTML timesheet meniru layout PDF Mandiri |
+| `src/lib/renderOvertimeHtml.ts` | Render HTML "Surat Keterangan Kerja Lembur" |
 | `src/lib/fillXlsx.ts` | Bangun workbook XLSX dari nol (ExcelJS), meniru layout PDF |
 | `src/lib/pdf.ts` | HTML → PDF via Puppeteer (Chromium) |
-| `src/app/api/export/xlsx` | Endpoint download XLSX |
-| `src/app/api/export/pdf` | Endpoint download PDF |
+| `src/app/api/export/xlsx` | Endpoint download XLSX timesheet |
+| `src/app/api/export/pdf` | Endpoint download PDF timesheet |
+| `src/app/api/export/lembur` | Endpoint download PDF surat lembur |
 | `src/assets/logo.ts` | Logo Mandiri MCO (base64, di-extract dari PDF contoh) |
 
 ## Deploy ke Vercel
