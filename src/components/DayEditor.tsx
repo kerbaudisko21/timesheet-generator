@@ -7,7 +7,7 @@ import {
   dayName,
   isWeekend,
   pad2,
-  toMinutes,
+  workedMinutes,
 } from "@/lib/timesheet";
 
 type Props = {
@@ -96,8 +96,7 @@ export function DayEditor({ days, defaultStart, defaultEnd, onChange }: Props) {
     for (const d of days) {
       if (d.status === "work") {
         workCount++;
-        const diff = toMinutes(d.end) - toMinutes(d.start);
-        if (diff > 0) mins += diff;
+        mins += workedMinutes(d);
       }
     }
     return {

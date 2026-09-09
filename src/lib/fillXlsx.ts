@@ -173,7 +173,11 @@ export async function fillTimesheetXlsx(ts: Timesheet): Promise<Buffer> {
       cCell.value = "-";
       bCell.numFmt = "h:mm";
       dCell.numFmt = "h:mm";
-      eCell.value = { formula: `D${r}-B${r}` } as ExcelJS.CellFormulaValue;
+      // MOD(End-Start,1) supaya shift lewat tengah malam (mis. 10:00->02:00)
+      // otomatis benar = 16 jam, bukan negatif.
+      eCell.value = {
+        formula: `MOD(D${r}-B${r},1)`,
+      } as ExcelJS.CellFormulaValue;
       eCell.numFmt = "h:mm";
     } else {
       bCell.value = null;

@@ -93,10 +93,19 @@ export function fromMinutes(mins: number): string {
   return `${pad2(h)}:${pad2(m)}`;
 }
 
-/** durasi kerja dalam menit; end < start dianggap 0 */
+/**
+ * Durasi kerja dalam menit.
+ * Bila jam pulang <= jam masuk, dianggap shift lewat tengah malam
+ * (pulang keesokan harinya), jadi ditambah 24 jam.
+ * Contoh: 10:00 -> 02:00 = 16 jam.
+ */
 export function workedMinutes(day: DayEntry): number {
   if (day.status !== "work") return 0;
-  const diff = toMinutes(day.end) - toMinutes(day.start);
+  if (!day.start || !day.end) return 0;
+  const start = toMinutes(day.start);
+  let end = toMinutes(day.end);
+  if (end < start) end += 24 * 60; // lewat tengah malam (pulang besok)
+  const diff = end - start;
   return diff > 0 ? diff : 0;
 }
 
