@@ -109,15 +109,27 @@ export function workedMinutes(day: DayEntry): number {
   return diff > 0 ? diff : 0;
 }
 
-/** Jam kerja normal per hari sebelum dihitung lembur. */
-export const NORMAL_WORK_MINUTES = 9 * 60;
+/**
+ * Jam selesai kantor bawaan bila profil belum punya setting
+ * (aturan perusahaan saat ini: 08:00-17:00).
+ */
+export const DEFAULT_OFFICE_END = "17:00";
+
+/**
+ * Jam selesai kantor yang dipakai sebagai patokan awal lembur.
+ * Diambil dari "Jam Selesai Default" di profil, supaya cukup diubah di satu
+ * tempat saat aturan jam kantor berganti.
+ */
+export function officeEndMinutes(profile: Profile): number {
+  return toMinutes(profile.defaultEnd || DEFAULT_OFFICE_END);
+}
 
 export interface OvertimeEntry {
   /** ISO date */
   date: string;
   /** "Selasa/4 Aug 2026" — gaya dokumen lembur */
   dayLabel: string;
-  /** "HH:mm" jam mulai lembur = jam masuk + 9 jam */
+  /** "HH:mm" jam mulai lembur = jam selesai kantor (atau jam masuk bila masuk lebih telat) */
   overtimeStart: string;
   /** "HH:mm" jam selesai lembur = jam pulang */
   overtimeEnd: string;
@@ -163,22 +175,34 @@ export function overtimeDayLabel(dateIso: string): string {
 }
 
 /**
- * Hitung lembur satu hari. Return null bila hari itu tidak lembur
- * (bukan hari kerja, atau total kerja <= 9 jam).
- * Jam mulai lembur = jam masuk + 9 jam. Jam selesai = jam pulang.
+ * Hitung lembur satu hari. Return null bila hari itu tidak lembur.
+ *
+ * Jam kantor itu tetap (saat ini 08:00-17:00), bukan dihitung dari jam masuk
+ * aktual. Lembur hanya ada bila jam pulang melewati jam selesai kantor
+ * (termasuk pulang keesokan hari, mis. jam 02:00). Datang lebih awal dari
+ * jam kantor tidak dihitung lembur.
+ * Jam mulai lembur = jam selesai kantor, jam selesai = jam pulang.
+ *
+ * @param officeEnd jam selesai kantor dalam menit sejak 00:00
  */
-export function overtimeForDay(day: DayEntry): OvertimeEntry | null {
+export function overtimeForDay(
+  day: DayEntry,
+  officeEnd: number = toMinutes(DEFAULT_OFFICE_END)
+): OvertimeEntry | null {
   if (day.status !== "work") return null;
-  const worked = workedMinutes(day);
-  if (worked <= NORMAL_WORK_MINUTES) return null;
+  if (!day.start || !day.end) return null;
 
   const startMin = toMinutes(day.start);
-  const otStartMin = (startMin + NORMAL_WORK_MINUTES) % (24 * 60);
-  const otEndMin = toMinutes(day.end);
-  const rawMinutes = worked - NORMAL_WORK_MINUTES;
+  let endMin = toMinutes(day.end);
+  if (endMin <= startMin) endMin += 24 * 60; // lewat tengah malam
 
-  const otStart = fromMinutes(otStartMin);
-  const otEnd = fromMinutes(otEndMin);
+  if (endMin <= officeEnd) return null; // pulang <= jam selesai kantor = tidak lembur
+
+  // Masuk setelah jam kantor selesai (shift malam): lembur dihitung dari jam masuk
+  const otStartMin = Math.max(startMin, officeEnd);
+  const rawMinutes = endMin - otStartMin;
+  const otStart = fromMinutes(otStartMin % (24 * 60));
+  const otEnd = fromMinutes(endMin % (24 * 60));
 
   return {
     date: day.date,
@@ -194,8 +218,9 @@ export function overtimeForDay(day: DayEntry): OvertimeEntry | null {
 
 /** Semua hari lembur dalam sebuah timesheet, urut tanggal. */
 export function overtimeEntries(ts: Timesheet): OvertimeEntry[] {
+  const officeEnd = officeEndMinutes(ts.profile);
   return ts.days
-    .map(overtimeForDay)
+    .map((d) => overtimeForDay(d, officeEnd))
     .filter((e): e is OvertimeEntry => e !== null);
 }
 
@@ -300,8 +325,8 @@ export function buildDays(month: string, profile: Profile): DayEntry[] {
     out.push({
       date,
       status,
-      start: weekend ? "" : profile.defaultStart || "09:00",
-      end: weekend ? "" : profile.defaultEnd || "18:00",
+      start: weekend ? "" : profile.defaultStart || "08:00",
+      end: weekend ? "" : profile.defaultEnd || DEFAULT_OFFICE_END,
       activity: weekend ? autoActivityFor("weekend", date) : "",
     });
   }
@@ -333,8 +358,8 @@ export const emptyProfile: Profile = {
   teamLeadTitle: "Team Lead",
   dhName: "",
   signatureDataUrl: "",
-  defaultStart: "09:00",
-  defaultEnd: "18:00",
+  defaultStart: "08:00",
+  defaultEnd: DEFAULT_OFFICE_END,
 };
 
 export function emptyTimesheet(month: string): Timesheet {

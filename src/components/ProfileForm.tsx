@@ -83,22 +83,27 @@ export function ProfileForm({ profile, onChange }: Props) {
           </p>
         </div>
         <div className="field">
-          <label htmlFor="p-ds">Jam Mulai Default</label>
+          <label htmlFor="p-ds">Jam Kantor Mulai</label>
           <input
             id="p-ds"
             type="time"
             value={profile.defaultStart}
             onChange={(e) => onChange({ defaultStart: e.target.value })}
           />
+          <p className="inline-help">Dipakai untuk isi otomatis hari kerja.</p>
         </div>
         <div className="field">
-          <label htmlFor="p-de">Jam Selesai Default</label>
+          <label htmlFor="p-de">Jam Kantor Selesai</label>
           <input
             id="p-de"
             type="time"
             value={profile.defaultEnd}
             onChange={(e) => onChange({ defaultEnd: e.target.value })}
           />
+          <p className="inline-help">
+            Isi otomatis hari kerja, dan lembur dihitung mulai jam ini. Ubah
+            bila aturan jam kantor berganti.
+          </p>
         </div>
       </div>
 

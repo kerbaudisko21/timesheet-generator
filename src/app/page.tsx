@@ -254,16 +254,18 @@ export default function Page() {
             }
           >
             <p className="inline-help" style={{ marginBottom: 12 }}>
-              Otomatis dari Aktivitas Harian: setiap hari kerja dengan total
-              &gt; 9 jam dihitung lembur. Jam mulai lembur = jam masuk + 9 jam,
-              total dibulatkan ke 0,5 jam terdekat. Unit Kerja memakai Main
-              Project Name.
+              Otomatis dari Aktivitas Harian: hari kerja yang pulang setelah
+              jam kantor selesai ({profile.defaultEnd || "17:00"}) dihitung
+              lembur, mulai dari jam tersebut sampai jam pulang. Datang lebih
+              awal tidak dihitung lembur. Total dibulatkan ke 0,5 jam
+              terdekat. Unit Kerja memakai Main Project Name.
             </p>
 
             {overtime.length === 0 ? (
               <p className="empty-note">
                 Tidak ada hari lembur pada {monthLabel(month)}. Isi jam pulang
-                lebih dari 9 jam kerja untuk memunculkan baris lembur.
+                setelah {profile.defaultEnd || "17:00"} untuk memunculkan baris
+                lembur.
               </p>
             ) : (
               <div className="ot-list">
