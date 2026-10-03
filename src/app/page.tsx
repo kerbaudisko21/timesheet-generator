@@ -10,11 +10,20 @@ import {
   currentMonth,
   emptyProfile,
   monthLabel,
+  OFFICE_ROTATION,
   overtimeEntries,
   reconcileDays,
+  resolveOfficeHours,
+  rotationOfficeHours,
+  shiftDaysToOffice,
   summarize,
 } from "@/lib/timesheet";
-import { DEFAULT_STATEMENT, Profile, Timesheet } from "@/lib/types";
+import {
+  DEFAULT_STATEMENT,
+  OfficeHours,
+  Profile,
+  Timesheet,
+} from "@/lib/types";
 
 type Toast = { msg: string; err?: boolean } | null;
 
@@ -30,6 +39,10 @@ export default function Page() {
   const [daysByMonth, setDaysByMonth] = usePersistentState<
     Record<string, Timesheet["days"]>
   >("tsg.daysByMonth", {});
+  // Ubahan manual jam kantor per bulan. Bulan tanpa ubahan mengikuti rotasi 3-bulanan.
+  const [officeByMonth, setOfficeByMonth] = usePersistentState<
+    Record<string, OfficeHours>
+  >("tsg.officeByMonth", {});
   const [statement, setStatement] = usePersistentState<string>(
     "tsg.statement",
     DEFAULT_STATEMENT
@@ -40,23 +53,77 @@ export default function Page() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // pastikan struktur hari untuk bulan aktif selalu sinkron dgn kalender + profil
+  const office = resolveOfficeHours(month, officeByMonth);
+  const rotationOffice = rotationOfficeHours(month);
+  const officeOverridden = !!officeByMonth[month];
+
+  // pastikan struktur hari untuk bulan aktif selalu sinkron dgn kalender + jam kantor
   useEffect(() => {
     if (!mounted) return;
     setDaysByMonth((prev) => {
       const existing = prev[month] ?? [];
-      const next = reconcileDays(month, existing, profile);
+      const next = reconcileDays(month, existing, office);
       return { ...prev, [month]: next };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, mounted, profile.defaultStart, profile.defaultEnd]);
+  }, [month, mounted, office.start, office.end]);
 
   const days = daysByMonth[month] ?? [];
 
   const timesheet: Timesheet = useMemo(
-    () => ({ month, profile, days, statement }),
-    [month, profile, days, statement]
+    () => ({ month, profile, office, days, statement }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [month, profile, office.start, office.end, days, statement]
   );
+
+  /** Ganti jam kantor bulan aktif; hari kerja yang masih memakai jam lama ikut berpindah. */
+  function applyOffice(next: OfficeHours) {
+    const prev = office;
+    setOfficeByMonth((all) => {
+      const copy = { ...all };
+      if (next.start === rotationOffice.start && next.end === rotationOffice.end) {
+        delete copy[month]; // sama dengan rotasi -> tidak perlu disimpan sebagai ubahan
+      } else {
+        copy[month] = next;
+      }
+      return copy;
+    });
+    setDaysByMonth((all) => ({
+      ...all,
+      [month]: shiftDaysToOffice(all[month] ?? [], prev, next),
+    }));
+  }
+
+  // Hari kerja yang jamnya persis salah satu pola kantor LAIN (bukan pola bulan ini).
+  // Biasanya sisa isian lama sebelum jam kantor berganti. Jam yang diubah sendiri
+  // (mis. lembur) tidak ikut terhitung karena tidak cocok dengan pola mana pun.
+  const isOtherPattern = (d: Timesheet["days"][number]) =>
+    d.status === "work" &&
+    (d.start !== office.start || d.end !== office.end) &&
+    OFFICE_ROTATION.some((o) => o.start === d.start && o.end === d.end);
+  const otherPatternDays = days.filter(isOtherPattern).length;
+
+  function alignDaysToOffice() {
+    updateDays(
+      days.map((d) =>
+        isOtherPattern(d) ? { ...d, start: office.start, end: office.end } : d
+      )
+    );
+  }
+
+  /** Dipanggil dari dropdown: nilai = jam mulai kantor, jam selesai ikut polanya. */
+  function selectOffice(start: string) {
+    const picked = officeChoices.find((o) => o.start === start);
+    if (picked) applyOffice(picked);
+  }
+
+  // Pola jam kantor yang bisa dipilih. Bila bulan ini punya jam di luar daftar
+  // (mis. tersimpan dari versi lama), tetap ditampilkan agar dropdown tidak kosong.
+  const officeChoices: OfficeHours[] = OFFICE_ROTATION.some(
+    (o) => o.start === office.start && o.end === office.end
+  )
+    ? OFFICE_ROTATION
+    : [...OFFICE_ROTATION, office];
 
   const summary = useMemo(() => summarize(timesheet), [timesheet]);
   const overtime = useMemo(() => overtimeEntries(timesheet), [timesheet]);
@@ -189,6 +256,54 @@ export default function Page() {
                   Reset isian bulan ini
                 </button>
               </div>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label htmlFor="office">Jam kantor bulan ini</label>
+                <select
+                  id="office"
+                  value={office.start}
+                  onChange={(e) => selectOffice(e.target.value)}
+                >
+                  {officeChoices.map((o) => (
+                    <option key={`${o.start}-${o.end}`} value={o.start}>
+                      {o.start} – {o.end}
+                    </option>
+                  ))}
+                </select>
+                <p className="inline-help">
+                  {officeOverridden
+                    ? `Dipilih manual (rotasi bulan ini: ${rotationOffice.start} – ${rotationOffice.end}). `
+                    : "Otomatis mengikuti rotasi 3 bulanan. "}
+                  Dipakai untuk isi otomatis hari kerja dan sebagai awal
+                  hitungan lembur.
+                  {officeOverridden && (
+                    <>
+                      {" "}
+                      <button
+                        type="button"
+                        className="link-btn"
+                        onClick={() => applyOffice(rotationOffice)}
+                      >
+                        Kembalikan ke rotasi
+                      </button>
+                    </>
+                  )}
+                </p>
+                {otherPatternDays > 0 && (
+                  <p className="inline-help warn-note">
+                    {otherPatternDays} hari kerja masih memakai jam pola lain,
+                    bukan {office.start} – {office.end}.{" "}
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={alignDaysToOffice}
+                    >
+                      Samakan ke {office.start} – {office.end}
+                    </button>
+                    . Hari yang jamnya Anda ubah sendiri (mis. lembur) tidak
+                    ikut berubah.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="stat-grid">
@@ -219,8 +334,8 @@ export default function Page() {
             {mounted ? (
               <DayEditor
                 days={days}
-                defaultStart={profile.defaultStart}
-                defaultEnd={profile.defaultEnd}
+                defaultStart={office.start}
+                defaultEnd={office.end}
                 onChange={updateDays}
               />
             ) : (
@@ -255,7 +370,7 @@ export default function Page() {
           >
             <p className="inline-help" style={{ marginBottom: 12 }}>
               Otomatis dari Aktivitas Harian: hari kerja yang pulang setelah
-              jam kantor selesai ({profile.defaultEnd || "17:00"}) dihitung
+              jam kantor selesai bulan ini ({office.end}) dihitung
               lembur, mulai dari jam tersebut sampai jam pulang. Datang lebih
               awal tidak dihitung lembur. Total dibulatkan ke 0,5 jam
               terdekat. Unit Kerja memakai Main Project Name.
@@ -264,7 +379,7 @@ export default function Page() {
             {overtime.length === 0 ? (
               <p className="empty-note">
                 Tidak ada hari lembur pada {monthLabel(month)}. Isi jam pulang
-                setelah {profile.defaultEnd || "17:00"} untuk memunculkan baris
+                setelah {office.end} untuk memunculkan baris
                 lembur.
               </p>
             ) : (

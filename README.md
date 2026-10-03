@@ -33,9 +33,27 @@ Buka http://localhost:3000
    *Isi semua hari kerja 09:00–18:00* untuk mempercepat.
 4. **Pernyataan Pegawai** — teks pernyataan. Bagian "Penilaian User" dibiarkan
    kosong (diisi TL).
-5. **Lembur** — otomatis: tiap hari kerja > 9 jam jadi baris lembur. Jam mulai
-   lembur = jam masuk + 9 jam, total dibulatkan ke 0,5 jam terdekat, Unit Kerja
-   = Main Project Name. Klik **Download Surat Lembur (PDF)**.
+5. **Lembur** — otomatis: hari kerja yang pulang setelah jam kantor selesai jadi
+   baris lembur, dihitung dari jam selesai kantor sampai jam pulang (datang lebih
+   awal tidak dihitung). Total dibulatkan ke 0,5 jam terdekat, Unit Kerja = Main
+   Project Name. Klik **Download Surat Lembur (PDF)**.
+
+### Jam kantor (rolling tiap 3 bulan)
+
+Jam kantor dipilih per bulan lewat dropdown **Jam kantor bulan ini** di section
+Periode, dan dipakai untuk isi otomatis hari kerja serta awal hitungan lembur.
+Nilai awalnya mengikuti rotasi di `OFFICE_ROTATION` (`src/lib/timesheet.ts`),
+dihitung dari Jul 2026:
+
+| Periode | Jam kantor |
+|---|---|
+| Jul–Sep 2026 | 09:00–18:00 |
+| Okt–Des 2026 | 08:00–17:00 |
+| Jan–Mar 2027 | 08:30–17:30 |
+| Apr–Jun 2027 | 09:00–18:00 (rotasi berulang, asumsi) |
+
+Pilihan manual tersimpan per bulan, jadi bulan lama tidak ikut berubah saat
+aturan berganti. Kalau ada pola baru, tambahkan ke `OFFICE_ROTATION`.
 6. Klik **Download XLSX** atau **Download PDF** di kanan atas.
 
 ## Struktur

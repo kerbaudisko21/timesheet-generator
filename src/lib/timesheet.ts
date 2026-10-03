@@ -2,6 +2,7 @@ import {
   DayEntry,
   DayStatus,
   DEFAULT_STATEMENT,
+  OfficeHours,
   Profile,
   Timesheet,
 } from "./types";
@@ -110,18 +111,44 @@ export function workedMinutes(day: DayEntry): number {
 }
 
 /**
- * Jam selesai kantor bawaan bila profil belum punya setting
- * (aturan perusahaan saat ini: 08:00-17:00).
+ * Rotasi jam kantor perusahaan: berganti tiap 3 bulan, urutan 3 pola.
+ * Dihitung dari ANCHOR (Jul 2026 = pola pertama, 09:00-18:00):
+ *   Jul-Sep 2026 -> 09:00-18:00
+ *   Okt-Des 2026 -> 08:00-17:00
+ *   Jan-Mar 2027 -> 08:30-17:30
+ *   Apr-Jun 2027 -> kembali ke 09:00-18:00 (asumsi rotasi berulang)
+ * Hanya nilai awal: jam kantor tiap bulan tetap bisa diubah manual di form.
  */
-export const DEFAULT_OFFICE_END = "17:00";
+export const OFFICE_ROTATION: OfficeHours[] = [
+  { start: "09:00", end: "18:00" },
+  { start: "08:00", end: "17:00" },
+  { start: "08:30", end: "17:30" },
+];
+const OFFICE_ROTATION_ANCHOR = { year: 2026, month: 7 };
 
-/**
- * Jam selesai kantor yang dipakai sebagai patokan awal lembur.
- * Diambil dari "Jam Selesai Default" di profil, supaya cukup diubah di satu
- * tempat saat aturan jam kantor berganti.
- */
-export function officeEndMinutes(profile: Profile): number {
-  return toMinutes(profile.defaultEnd || DEFAULT_OFFICE_END);
+/** Jam kantor menurut rotasi untuk bulan "YYYY-MM". */
+export function rotationOfficeHours(month: string): OfficeHours {
+  const [y, m] = month.split("-").map(Number);
+  const monthsSinceAnchor =
+    (y - OFFICE_ROTATION_ANCHOR.year) * 12 + (m - OFFICE_ROTATION_ANCHOR.month);
+  const block = Math.floor(monthsSinceAnchor / 3); // tiap 3 bulan ganti pola
+  const idx =
+    ((block % OFFICE_ROTATION.length) + OFFICE_ROTATION.length) %
+    OFFICE_ROTATION.length;
+  return { ...OFFICE_ROTATION[idx] };
+}
+
+/** Jam kantor yang berlaku: ubahan manual bulan itu, kalau tidak ada pakai rotasi. */
+export function resolveOfficeHours(
+  month: string,
+  overrides: Record<string, OfficeHours>
+): OfficeHours {
+  return overrides[month] ?? rotationOfficeHours(month);
+}
+
+/** Jam selesai kantor (menit sejak 00:00) = patokan awal lembur. */
+export function officeEndMinutes(ts: Pick<Timesheet, "month" | "office">): number {
+  return toMinutes((ts.office ?? rotationOfficeHours(ts.month)).end);
 }
 
 export interface OvertimeEntry {
@@ -187,7 +214,7 @@ export function overtimeDayLabel(dateIso: string): string {
  */
 export function overtimeForDay(
   day: DayEntry,
-  officeEnd: number = toMinutes(DEFAULT_OFFICE_END)
+  officeEnd: number
 ): OvertimeEntry | null {
   if (day.status !== "work") return null;
   if (!day.start || !day.end) return null;
@@ -218,7 +245,7 @@ export function overtimeForDay(
 
 /** Semua hari lembur dalam sebuah timesheet, urut tanggal. */
 export function overtimeEntries(ts: Timesheet): OvertimeEntry[] {
-  const officeEnd = officeEndMinutes(ts.profile);
+  const officeEnd = officeEndMinutes(ts);
   return ts.days
     .map((d) => overtimeForDay(d, officeEnd))
     .filter((e): e is OvertimeEntry => e !== null);
@@ -314,8 +341,8 @@ export function activityLines(raw: string): string[] {
   return lines.map((l, i) => `${i + 1}. ${l}`);
 }
 
-/** buat daftar hari default untuk sebuah bulan */
-export function buildDays(month: string, profile: Profile): DayEntry[] {
+/** buat daftar hari default untuk sebuah bulan, jam kerja = jam kantor bulan itu */
+export function buildDays(month: string, office: OfficeHours): DayEntry[] {
   const total = daysInMonth(month);
   const out: DayEntry[] = [];
   for (let d = 1; d <= total; d++) {
@@ -325,8 +352,8 @@ export function buildDays(month: string, profile: Profile): DayEntry[] {
     out.push({
       date,
       status,
-      start: weekend ? "" : profile.defaultStart || "08:00",
-      end: weekend ? "" : profile.defaultEnd || DEFAULT_OFFICE_END,
+      start: weekend ? "" : office.start,
+      end: weekend ? "" : office.end,
       activity: weekend ? autoActivityFor("weekend", date) : "",
     });
   }
@@ -337,11 +364,28 @@ export function buildDays(month: string, profile: Profile): DayEntry[] {
 export function reconcileDays(
   month: string,
   existing: DayEntry[],
-  profile: Profile
+  office: OfficeHours
 ): DayEntry[] {
-  const fresh = buildDays(month, profile);
+  const fresh = buildDays(month, office);
   const byDate = new Map(existing.map((d) => [d.date, d]));
   return fresh.map((f) => byDate.get(f.date) ?? f);
+}
+
+/**
+ * Saat jam kantor sebuah bulan diubah, hari kerja yang jamnya masih persis
+ * sama dengan jam kantor lama ikut berpindah ke yang baru. Hari yang jamnya
+ * sudah Anda ubah sendiri (mis. lembur) tidak disentuh.
+ */
+export function shiftDaysToOffice(
+  days: DayEntry[],
+  from: OfficeHours,
+  to: OfficeHours
+): DayEntry[] {
+  return days.map((d) =>
+    d.status === "work" && d.start === from.start && d.end === from.end
+      ? { ...d, start: to.start, end: to.end }
+      : d
+  );
 }
 
 export const emptyProfile: Profile = {
@@ -358,15 +402,15 @@ export const emptyProfile: Profile = {
   teamLeadTitle: "Team Lead",
   dhName: "",
   signatureDataUrl: "",
-  defaultStart: "08:00",
-  defaultEnd: DEFAULT_OFFICE_END,
 };
 
 export function emptyTimesheet(month: string): Timesheet {
+  const office = rotationOfficeHours(month);
   return {
     month,
     profile: emptyProfile,
-    days: buildDays(month, emptyProfile),
+    office,
+    days: buildDays(month, office),
     statement: DEFAULT_STATEMENT,
   };
 }

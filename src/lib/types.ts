@@ -37,15 +37,25 @@ export interface Profile {
   dhName: string;
   /** data URL gambar tanda tangan pegawai (png), opsional */
   signatureDataUrl: string;
-  /** Default jam kerja untuk tombol "isi semua" */
-  defaultStart: string;
-  defaultEnd: string;
+}
+
+/**
+ * Jam kantor yang berlaku pada suatu bulan. Berganti tiap 3 bulan (rolling),
+ * jadi disimpan per bulan, bukan di profil.
+ */
+export interface OfficeHours {
+  /** "HH:mm" */
+  start: string;
+  /** "HH:mm" — juga patokan awal lembur */
+  end: string;
 }
 
 export interface Timesheet {
   /** "YYYY-MM" */
   month: string;
   profile: Profile;
+  /** Jam kantor bulan ini: default isian hari kerja + patokan lembur */
+  office: OfficeHours;
   days: DayEntry[];
   statement: string;
 }
