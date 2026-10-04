@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Collapsible } from "@/components/Collapsible";
 import { ProfileForm } from "@/components/ProfileForm";
 import { DayEditor } from "@/components/DayEditor";
+import { MichelyImport } from "@/components/MichelyImport";
 import { Preview } from "@/components/Preview";
 import { usePersistentState } from "@/lib/storage";
 import {
@@ -331,6 +332,15 @@ export default function Page() {
           </Collapsible>
 
           <Collapsible title="3. Aktivitas Harian">
+            {mounted && (
+              <MichelyImport
+                month={month}
+                days={days}
+                office={office}
+                onChange={updateDays}
+                onToast={showToast}
+              />
+            )}
             {mounted ? (
               <DayEditor
                 days={days}
