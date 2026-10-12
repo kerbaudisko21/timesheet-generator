@@ -146,9 +146,11 @@ export function resolveOfficeHours(
   return overrides[month] ?? rotationOfficeHours(month);
 }
 
-/** Jam selesai kantor (menit sejak 00:00) = patokan awal lembur. */
-export function officeEndMinutes(ts: Pick<Timesheet, "month" | "office">): number {
-  return toMinutes((ts.office ?? rotationOfficeHours(ts.month)).end);
+/** Jam kantor timesheet; bila payload lama tak punya `office`, pakai rotasi bulannya. */
+export function officeHoursOf(
+  ts: Pick<Timesheet, "month" | "office">
+): OfficeHours {
+  return ts.office ?? rotationOfficeHours(ts.month);
 }
 
 export interface OvertimeEntry {
@@ -156,7 +158,7 @@ export interface OvertimeEntry {
   date: string;
   /** "Selasa/4 Aug 2026" — gaya dokumen lembur */
   dayLabel: string;
-  /** "HH:mm" jam mulai lembur = jam selesai kantor (atau jam masuk bila masuk lebih telat) */
+  /** "HH:mm" jam mulai lembur = jam masuk efektif + lama jam kantor (9 jam) */
   overtimeStart: string;
   /** "HH:mm" jam selesai lembur = jam pulang */
   overtimeEnd: string;
@@ -204,29 +206,37 @@ export function overtimeDayLabel(dateIso: string): string {
 /**
  * Hitung lembur satu hari. Return null bila hari itu tidak lembur.
  *
- * Jam kantor itu tetap (saat ini 08:00-17:00), bukan dihitung dari jam masuk
- * aktual. Lembur hanya ada bila jam pulang melewati jam selesai kantor
- * (termasuk pulang keesokan hari, mis. jam 02:00). Datang lebih awal dari
- * jam kantor tidak dihitung lembur.
- * Jam mulai lembur = jam selesai kantor, jam selesai = jam pulang.
+ * Jam masuk efektif = yang lebih lambat antara jam kantor mulai dan jam masuk
+ * aktual:
+ *  - datang lebih awal dari jam kantor -> dianggap mulai tepat jam kantor
+ *    (datang pagi tidak dihitung lembur);
+ *  - datang lebih lambat dari jam kantor -> kewajiban 9 jam dihitung dari jam
+ *    masuk sebenarnya.
+ * Lembur dimulai satu hari kerja penuh (selisih jam kantor, 9 jam) setelah jam
+ * masuk efektif dan berakhir di jam pulang, termasuk bila pulang keesokan hari.
  *
- * @param officeEnd jam selesai kantor dalam menit sejak 00:00
+ * Contoh kantor 08:00-17:00: masuk 08:57 pulang 22:05 -> lembur 17.57-22.05;
+ * masuk 07:00 pulang 19:00 -> lembur 17.00-19.00.
  */
 export function overtimeForDay(
   day: DayEntry,
-  officeEnd: number
+  office: OfficeHours
 ): OvertimeEntry | null {
   if (day.status !== "work") return null;
   if (!day.start || !day.end) return null;
+
+  const officeStartMin = toMinutes(office.start);
+  // lama jam kantor; semua pola rotasi 9 jam, 9 jam juga jadi cadangan bila jam kantor tak valid
+  const officeLength = toMinutes(office.end) - officeStartMin || 9 * 60;
 
   const startMin = toMinutes(day.start);
   let endMin = toMinutes(day.end);
   if (endMin <= startMin) endMin += 24 * 60; // lewat tengah malam
 
-  if (endMin <= officeEnd) return null; // pulang <= jam selesai kantor = tidak lembur
+  const effectiveStart = Math.max(startMin, officeStartMin);
+  const otStartMin = effectiveStart + officeLength;
+  if (endMin <= otStartMin) return null; // belum melewati kewajiban 9 jam = tidak lembur
 
-  // Masuk setelah jam kantor selesai (shift malam): lembur dihitung dari jam masuk
-  const otStartMin = Math.max(startMin, officeEnd);
   const rawMinutes = endMin - otStartMin;
   const otStart = fromMinutes(otStartMin % (24 * 60));
   const otEnd = fromMinutes(endMin % (24 * 60));
@@ -245,9 +255,9 @@ export function overtimeForDay(
 
 /** Semua hari lembur dalam sebuah timesheet, urut tanggal. */
 export function overtimeEntries(ts: Timesheet): OvertimeEntry[] {
-  const officeEnd = officeEndMinutes(ts);
+  const office = officeHoursOf(ts);
   return ts.days
-    .map((d) => overtimeForDay(d, officeEnd))
+    .map((d) => overtimeForDay(d, office))
     .filter((e): e is OvertimeEntry => e !== null);
 }
 

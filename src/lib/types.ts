@@ -46,7 +46,7 @@ export interface Profile {
 export interface OfficeHours {
   /** "HH:mm" */
   start: string;
-  /** "HH:mm" — juga patokan awal lembur */
+  /** "HH:mm" — jam masuk terawal yang dihitung; lembur mulai 9 jam setelah jam masuk */
   end: string;
 }
 

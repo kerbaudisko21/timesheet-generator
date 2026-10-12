@@ -379,18 +379,19 @@ export default function Page() {
             }
           >
             <p className="inline-help" style={{ marginBottom: 12 }}>
-              Otomatis dari Aktivitas Harian: hari kerja yang pulang setelah
-              jam kantor selesai bulan ini ({office.end}) dihitung
-              lembur, mulai dari jam tersebut sampai jam pulang. Datang lebih
-              awal tidak dihitung lembur. Total dibulatkan ke 0,5 jam
-              terdekat. Unit Kerja memakai Main Project Name.
+              Otomatis dari Aktivitas Harian: lembur dimulai 9 jam setelah jam
+              masuk. Datang lebih awal dari jam kantor ({office.start}) dihitung
+              mulai {office.start}, jadi lembur mulai {office.end}. Datang lebih
+              lambat dihitung dari jam masuk sebenarnya (masuk 09:00 → lembur
+              mulai 18:00). Total dibulatkan ke 0,5 jam terdekat. Unit Kerja
+              memakai Main Project Name.
             </p>
 
             {overtime.length === 0 ? (
               <p className="empty-note">
-                Tidak ada hari lembur pada {monthLabel(month)}. Isi jam pulang
-                setelah {office.end} untuk memunculkan baris
-                lembur.
+                Tidak ada hari lembur pada {monthLabel(month)}. Lembur muncul
+                bila jam pulang melewati 9 jam sejak jam masuk (jam masuk
+                paling awal dihitung {office.start}).
               </p>
             ) : (
               <div className="ot-list">

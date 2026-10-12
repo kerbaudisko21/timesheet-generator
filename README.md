@@ -33,15 +33,19 @@ Buka http://localhost:3000
    *Isi semua hari kerja 09:00–18:00* untuk mempercepat.
 4. **Pernyataan Pegawai** — teks pernyataan. Bagian "Penilaian User" dibiarkan
    kosong (diisi TL).
-5. **Lembur** — otomatis: hari kerja yang pulang setelah jam kantor selesai jadi
-   baris lembur, dihitung dari jam selesai kantor sampai jam pulang (datang lebih
-   awal tidak dihitung). Total dibulatkan ke 0,5 jam terdekat, Unit Kerja = Main
-   Project Name. Klik **Download Surat Lembur (PDF)**.
+5. **Lembur** — otomatis: lembur dimulai 9 jam setelah jam masuk efektif dan
+   berakhir di jam pulang. Jam masuk efektif = yang lebih lambat antara jam
+   kantor mulai dan jam masuk aktual (datang lebih awal dihitung mulai jam
+   kantor, datang telat dihitung dari jam masuk sebenarnya). Contoh kantor
+   08:00–17:00: masuk 08:57 pulang 22:05 → lembur 17.57–22.05; masuk 07:00
+   pulang 19:00 → lembur 17.00–19.00. Total dibulatkan ke 0,5 jam terdekat,
+   Unit Kerja = Main Project Name. Klik **Download Surat Lembur (PDF)**.
 
 ### Jam kantor (rolling tiap 3 bulan)
 
 Jam kantor dipilih per bulan lewat dropdown **Jam kantor bulan ini** di section
-Periode, dan dipakai untuk isi otomatis hari kerja serta awal hitungan lembur.
+Periode, dan dipakai untuk isi otomatis hari kerja serta batas jam masuk terawal
+untuk hitungan lembur.
 Nilai awalnya mengikuti rotasi di `OFFICE_ROTATION` (`src/lib/timesheet.ts`),
 dihitung dari Jul 2026:
 
