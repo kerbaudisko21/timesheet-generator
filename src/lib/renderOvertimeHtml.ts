@@ -54,7 +54,7 @@ export function renderOvertimeHtml(
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: ${forPdf ? "#fff" : "#e9edf2"}; }
   body {
-    font-family: "Times New Roman", Georgia, serif;
+    font-family: "Times New Roman", "Liberation Serif", Tinos, Georgia, serif;
     color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -100,11 +100,13 @@ export function renderOvertimeHtml(
     font-weight: bold;
     line-height: 1.2;
   }
-  .c-name { width: 62px; text-align: center; vertical-align: middle; }
-  .c-date { width: 96px; text-align: center; }
-  .c-unit { width: 52px; text-align: center; }
-  .c-window { width: 84px; text-align: center; }
-  .c-total { width: 46px; text-align: center; }
+  /* Lebar kolom dibuat longgar: di server (Vercel) tidak ada Times New Roman, jadi
+     font pengganti lebih lebar. Tanggal & jam dikunci satu baris supaya tidak terpecah. */
+  .c-name { width: 64px; text-align: center; vertical-align: middle; }
+  .c-date { width: 118px; text-align: center; white-space: nowrap; }
+  .c-unit { width: 54px; text-align: center; }
+  .c-window { width: 92px; text-align: center; white-space: nowrap; }
+  .c-total { width: 62px; text-align: center; }
   .c-work { text-align: left; }
   tbody td { line-height: 1.3; }
   .sign {
